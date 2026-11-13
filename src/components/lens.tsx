@@ -85,9 +85,9 @@ export function Lens() {
           </div>
         </div>
 
-        <form onSubmit={run} className="mt-10 flex flex-col gap-3 sm:flex-row" noValidate>
+        <form onSubmit={run} method="post" className="mt-10 flex flex-col gap-3 sm:flex-row" noValidate>
           <label htmlFor="url" className="sr-only">Endereço do site</label>
-          <input id="url" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="exemplo.com.br" inputMode="url" autoComplete="url" spellCheck={false}
+          <input id="url" type="url" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="exemplo.com.br" inputMode="url" autoComplete="url" spellCheck={false}
             aria-invalid={!!error} aria-describedby={error ? "url-err" : undefined}
             className="min-w-0 flex-1 rounded-full border-2 border-ink bg-card px-6 py-4 font-mono text-base outline-none placeholder:text-muted/60 focus:ring-4 focus:ring-ink/15" />
           <button disabled={loading} className="rounded-full bg-ink px-8 py-4 font-bold text-paper transition-opacity hover:opacity-90 disabled:opacity-60">

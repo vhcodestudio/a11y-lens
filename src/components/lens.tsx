@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { CATEGORIES, grade, toMarkdown, type Category, type Report, type Severity } from "@/lib/report";
 
@@ -114,6 +114,8 @@ export function Lens() {
         )}
       </AnimatePresence>
 
+      {!report && !loading && <Explainer />}
+
       {report && (
         <motion.section initial={{ filter: reduce ? "none" : "blur(14px)", opacity: 0 }} animate={{ filter: "blur(0px)", opacity: 1 }} transition={{ duration: 0.8 }}
           aria-labelledby="rel-h" className="border-t border-rule bg-card">
@@ -133,7 +135,7 @@ export function Lens() {
             <div className="mt-10 grid gap-10 lg:grid-cols-[16rem_1fr]">
               <div className="text-center lg:text-left">
                 <p className="text-sm text-muted">Nota geral</p>
-                <p className={`font-mono text-8xl font-medium leading-none tabular-nums ${tone(report.overall)}`}>{report.overall}</p>
+                <p className={`font-mono text-8xl font-medium leading-none tabular-nums ${tone(report.overall)}`}><CountUp to={report.overall} /></p>
                 <p className="mt-2 text-lg">Conceito <b>{grade(report.overall)}</b> · {failCount} {failCount === 1 ? "problema" : "problemas"}</p>
               </div>
               <div>{CATEGORIES.map((c, i) => <ChartLine key={c} cat={c} score={report.scores[c]} i={i} />)}</div>
@@ -192,5 +194,62 @@ export function Lens() {
         </motion.section>
       )}
     </div>
+  );
+}
+
+/** Counts from 0 to the score; jumps straight there for reduced motion. */
+function CountUp({ to }: { to: number }) {
+  const reduce = useReducedMotion();
+  const [n, setN] = useState(reduce ? to : 0);
+  useEffect(() => {
+    if (reduce) return;
+    let raf = 0;
+    const t0 = performance.now();
+    const step = (t: number) => {
+      const k = Math.min(1, (t - t0) / 1100);
+      setN(Math.round(to * (1 - Math.pow(1 - k, 3))));
+      if (k < 1) raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [to, reduce]);
+  return <>{n}</>;
+}
+
+const ICONS: Record<Category, string> = {
+  acessibilidade: "M12 4a2 2 0 1 0 0 .01M5 9l7 1 7-1M12 10v5l-3 6M12 15l3 6",
+  performance: "M3 13a9 9 0 0 1 18 0M12 13l5-5M7 13h.01M17 13h.01",
+  seo: "M10.5 4a6.5 6.5 0 1 0 0 13 6.5 6.5 0 1 0 0-13M15.5 15.5 21 21",
+  seguranca: "M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6zM9 12l2 2 4-4",
+};
+const BLURB: Record<Category, string> = {
+  acessibilidade: "Rótulos, textos alternativos, títulos, zoom e navegação por teclado.",
+  performance: "Tempo de resposta, peso do HTML, compressão, scripts que travam a página.",
+  seo: "Title, descrição, canonical, Open Graph, dados estruturados, robots.txt.",
+  seguranca: "HTTPS, HSTS, CSP, clickjacking, cookies e conteúdo misto.",
+};
+
+/** Empty-state section: what the exam measures, with icons traced in as they scroll in. */
+function Explainer() {
+  const reduce = useReducedMotion();
+  return (
+    <section aria-labelledby="ex-h" className="mx-auto max-w-6xl px-4 pb-20 sm:px-6">
+      <h2 id="ex-h" className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted">O que o exame mede · 35 verificações</h2>
+      <ul className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {CATEGORIES.map((c, i) => (
+          <motion.li key={c} initial={{ opacity: 0, y: reduce ? 0 : 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
+            transition={{ delay: i * 0.1, duration: 0.6 }} whileHover={reduce ? undefined : { y: -6 }}
+            className="group rounded-3xl border border-rule bg-card p-6 transition-shadow hover:shadow-[0_18px_40px_-20px_rgba(13,43,42,.35)]">
+            <svg viewBox="0 0 24 24" className="size-10" aria-hidden="true">
+              <motion.path d={ICONS[c]} fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"
+                initial={{ pathLength: reduce ? 1 : 0 }} whileInView={{ pathLength: 1 }} viewport={{ once: true }} transition={{ duration: 1.2, delay: 0.2 + i * 0.1 }} />
+            </svg>
+            <h3 className="mt-6 text-xl font-bold">{LABEL[c]}</h3>
+            <p className="mt-2 text-sm leading-relaxed text-muted">{BLURB[c]}</p>
+            <p className="chart-letter mt-6 text-sm text-muted/60 transition-[filter] duration-500 group-hover:blur-0" style={{ filter: `blur(${1.5 - i * 0.3}px)` }} aria-hidden="true">{LETTERS[c]}</p>
+          </motion.li>
+        ))}
+      </ul>
+    </section>
   );
 }

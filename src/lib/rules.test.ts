@@ -53,3 +53,21 @@ describe("SSRF guard", () => {
     }
   });
 });
+
+describe("languages", () => {
+  it("returns English and Spanish findings with translated details", () => {
+    const html = "<html><head><title>x</title></head><body><img src='a.png'></body></html>";
+    const page = { url: "https://x.example/", html, headers: {}, status: 200, ms: 100, bytes: html.length };
+    const en = audit(page, "en").findings.find((f) => f.id === "image-alt")!;
+    expect(en.title).toBe("Images with alt text");
+    expect(en.detail).toBe("1 image(s) without alt.");
+    const es = audit(page, "es").findings.find((f) => f.id === "title")!;
+    expect(es.title).toBe("Título de la página");
+    expect(es.detail).toBe("“x” (1 caracteres)");
+  });
+  it("keeps every finding detail translatable in English", () => {
+    const html = "<html><body></body></html>";
+    const r = audit({ url: "http://x.example/", html, headers: {}, status: 200, ms: 1200, bytes: 10 }, "en");
+    for (const f of r.findings) expect(f.detail, f.id).not.toMatch(/[ãçõ]|não|página|Nenhum/);
+  });
+});

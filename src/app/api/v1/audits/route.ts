@@ -1,5 +1,6 @@
 import { FetchError, fetchPage } from "@/lib/fetch-page";
 import { audit } from "@/lib/rules";
+import { API_ERRORS, isLang, type Lang } from "@/lib/i18n";
 
 const hits = new Map<string, number[]>();
 function limited(ip: string) {
@@ -11,9 +12,12 @@ function limited(ip: string) {
   return recent.length > 10;
 }
 
-const err = (status: number, code: string, message: string, headers?: HeadersInit) => Response.json({ error: { code, message } }, { status, headers });
+let reqLang: Lang = "pt";
+const err = (status: number, code: string, message: string, headers?: HeadersInit) => Response.json({ error: { code, message: API_ERRORS[reqLang][code] ?? message } }, { status, headers });
 
 export async function POST(req: Request) {
+  const qLang = new URL(req.url).searchParams.get("lang");
+  reqLang = isLang(qLang) ? qLang : "pt";
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0].trim() ?? "anon";
   if (limited(ip)) return err(429, "rate_limit_exceeded", "Muitas auditorias seguidas. Espere um minuto.", { "Retry-After": "60" });
   let url: unknown;
@@ -27,7 +31,7 @@ export async function POST(req: Request) {
   if (typeof url !== "string" || !url.trim()) return err(422, "validation_error", "Informe a URL da página.");
   try {
     const page = await fetchPage(url);
-    return Response.json({ data: audit(page) }, { status: 200, headers: { "Cache-Control": "no-store" } });
+    return Response.json({ data: audit(page, reqLang) }, { status: 200, headers: { "Cache-Control": "no-store" } });
   } catch (e) {
     if (e instanceof FetchError) return err(e.status, e.code, e.message);
     return err(500, "internal_error", "Algo deu errado durante a auditoria.");

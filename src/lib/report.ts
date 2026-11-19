@@ -12,13 +12,16 @@ export const CATEGORIES: Category[] = ["acessibilidade", "performance", "seo", "
 
 export const grade = (n: number) => (n >= 90 ? "A" : n >= 80 ? "B" : n >= 65 ? "C" : n >= 50 ? "D" : "F");
 
-export function toMarkdown(r: Report) {
+type MdText = { title: string; made: string; overall: string; category: string; score: string; problems: string; why: string; fix: string; rule: string; passed: string };
+const MD_PT: MdText = { title: "Relatório a11y-lens", made: "Gerado em", overall: "nota geral", category: "Categoria", score: "Nota", problems: "Problemas", why: "Por que importa", fix: "Como corrigir", rule: "Regra", passed: "Aprovados" };
+
+export function toMarkdown(r: Report, h: MdText = MD_PT, cat: Record<Category, string> = { acessibilidade: "acessibilidade", performance: "performance", seo: "seo", seguranca: "seguranca" }) {
   const fails = r.findings.filter((f) => !f.passed);
   return [
-    `# Relatório a11y-lens · ${r.url}`, "", `Gerado em ${r.fetchedAt.slice(0, 16).replace("T", " ")} UTC · nota geral **${r.overall} (${grade(r.overall)})**`, "",
-    "| Categoria | Nota |", "|---|---|", ...CATEGORIES.map((c) => `| ${c} | ${r.scores[c]} |`), "",
-    `## Problemas (${fails.length})`, "",
-    ...fails.flatMap((f) => [`### [${f.severity}] ${f.title} · ${f.category}`, "", f.detail, "", `**Por que importa:** ${f.why}`, "", `**Como corrigir:** ${f.fix}`, ...(f.snippet ? ["", "```html", f.snippet, "```"] : []), "", `Regra: ${f.ref}`, ""]),
-    `## Aprovados (${r.findings.length - fails.length})`, "", ...r.findings.filter((f) => f.passed).map((f) => `- ${f.title}`),
+    `# ${h.title} · ${r.url}`, "", `${h.made} ${r.fetchedAt.slice(0, 16).replace("T", " ")} UTC · ${h.overall} **${r.overall} (${grade(r.overall)})**`, "",
+    `| ${h.category} | ${h.score} |`, "|---|---|", ...CATEGORIES.map((c) => `| ${cat[c]} | ${r.scores[c]} |`), "",
+    `## ${h.problems} (${fails.length})`, "",
+    ...fails.flatMap((f) => [`### [${f.severity}] ${f.title} · ${cat[f.category]}`, "", f.detail, "", `**${h.why}:** ${f.why}`, "", `**${h.fix}:** ${f.fix}`, ...(f.snippet ? ["", "```html", f.snippet, "```"] : []), "", `${h.rule}: ${f.ref}`, ""]),
+    `## ${h.passed} (${r.findings.length - fails.length})`, "", ...r.findings.filter((f) => f.passed).map((f) => `- ${f.title}`),
   ].join("\n");
 }

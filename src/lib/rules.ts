@@ -1,6 +1,7 @@
 import { parse, type HTMLElement } from "node-html-parser";
 
 import { CATEGORIES, type Category, type Finding, type PageInput, type Report, type Severity } from "./report";
+import { localizeFinding } from "./rules-i18n";
 export * from "./report";
 
 const W: Record<Severity, number> = { critical: 15, high: 10, medium: 5, low: 2 };
@@ -169,14 +170,14 @@ const RULES: Rule[] = [
 
 export const RULE_COUNT = RULES.length;
 
-export function audit(page: PageInput): Report {
+export function audit(page: PageInput, lang: "pt" | "en" | "es" = "pt"): Report {
   const root = parse(page.html, { lowerCaseTagName: false, comment: false });
   const headers = Object.fromEntries(Object.entries(page.headers).map(([k, v]) => [k.toLowerCase(), v]));
   const ctx: Ctx = { root, page, h: (k) => headers[k], isHttps: page.url.startsWith("https://") };
   const findings: Finding[] = RULES.map((r) => {
     let res: { passed: boolean; detail: string; examples?: string[] };
     try { res = r.run(ctx); } catch { res = { passed: true, detail: "Não foi possível verificar." }; }
-    return { id: r.id, category: r.category, severity: r.severity, title: r.title, why: r.why, fix: r.fix, snippet: r.snippet, ref: r.ref, ...res };
+    return localizeFinding({ id: r.id, category: r.category, severity: r.severity, title: r.title, why: r.why, fix: r.fix, snippet: r.snippet, ref: r.ref, ...res }, lang);
   });
   const scores = Object.fromEntries(CATEGORIES.map((c) => {
     const fs = findings.filter((f) => f.category === c);
